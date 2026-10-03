@@ -25,9 +25,10 @@ Given a query that matches at least one listing, the agent completes all three
 tool calls and returns a fit card — in at least 4 of 5 tries.
 
 **Why this target:**
-<!-- Why 4 of 5 and not 5 of 5? Something about your search, probably —
-     "my search is a plain keyword match and some phrasings will miss" is a
-     real answer. -->
+My search is a plain keyword match with a regex query parser, so an unusual
+phrasing can slip past it, and two of the three tools depend on a model call
+that can time out or get rate limited. One miss in five leaves room for that
+without excusing a search that is actually broken.
 
 ---
 
@@ -37,12 +38,14 @@ Given a query that matches no listings, the agent stops before calling
 `suggest_outfit` and returns a message naming what to change — 5 of 5 tries.
 
 **Why this target:**
-<!-- Why is 5 of 5 reasonable here when criterion 1 isn't? What's different
-     about this path? -->
+This path never touches the model. It is a filter over a fixed file followed
+by an `if`, so the same input should give the same result every time. Anything
+less than 5 of 5 would mean the branch itself is wrong, not that something
+outside my code got unlucky.
 
 ---
 
-## 3. Something about state
+## 3. The item that was found is the item that gets styled and captioned
 
 <!-- YOU WRITE THIS ONE.
 
@@ -54,15 +57,22 @@ Given a query that matches no listings, the agent stops before calling
      compares session["selected_item"] against what actually reached
      suggest_outfit is the shape you're after. -->
 
-
+On a matching query, `session["selected_item"]["id"]` equals
+`session["search_results"][0]["id"]`, and the item title from
+`selected_item` appears in the outfit suggestion or the fit card, in 5 of 5
+tries.
 
 **Why this target:**
 
-
+Every hand-off goes through the session dictionary, and nothing in between is
+random, so the id check should never fail. The title check leans on the model,
+but both tools get the title directly in their prompt, so a caption that never
+mentions the item would mean the wrong thing reached the tool. That is a state
+bug and I want zero of them.
 
 ---
 
-## 4. Something about the fit card
+## 4. The fit card reads like a real post
 
 <!-- YOU WRITE THIS ONE.
 
@@ -75,15 +85,20 @@ Given a query that matches no listings, the agent stops before calling
      sentence? A card longer than a caption anyone would post? Any of those can
      be turned into a number. -->
 
-
+For a matching query, the fit card is 2 to 4 sentences, under 400 characters,
+and mentions the item's price (for example `$24`) and its platform name, in at
+least 4 of 5 tries.
 
 **Why this target:**
 
-
+The caption comes from the model at temperature 0.9, so the wording will drift
+from run to run and it may now and then forget the price or run long. I tell it
+exactly what to include, so most tries should pass, but asking for 5 of 5 on a
+creative model output would be pretending I control it more than I do.
 
 ---
 
-## 5. Your choice
+## 5. Search never breaks the price cap or the size
 
 <!-- YOU WRITE THIS ONE TOO.
 
@@ -92,11 +107,18 @@ Given a query that matches no listings, the agent stops before calling
      search respects a price ceiling — anything, as long as it names a number
      or an observable outcome. -->
 
-
+For queries that give a price cap and a size, every item in
+`session["search_results"]` costs at most that price and has a size that
+matches under my size rule (so asking for `M` never returns an `XL` or a
+`US 9` shoe), in 5 of 5 tries.
 
 **Why this target:**
 
-
+A thrift search that shows you a $45 jacket when you said under $30, or a pair
+of shoes when you asked for a medium top, feels broken even if the caption is
+great. The filter is plain code with no model involved, so there is no reason
+for it to ever be wrong. The data has messy sizes like `US 9` and
+`XL (oversized)`, which is exactly where a substring check would slip.
 
 ---
 
