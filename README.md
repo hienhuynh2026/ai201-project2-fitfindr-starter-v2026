@@ -148,8 +148,19 @@ loop forever.
 **One full query**
 
 ```
-$ python app.py ask '...'
+$ python app.py ask 'vintage graphic tee under $30, size M'
 
+  Found:    Y2K Baby Tee — Butterfly Print — $18.0 on depop
+
+  Outfit:   Hey friend! That Y2K Baby Tee — Butterfly Print is an absolute steal for $18 and so versatile. Let's style it with pieces you already own!
+
+Outfit 1: Play up that nostalgic 2000s vibe by pairing the Y2K Baby Tee — Butterfly Print with your Baggy straight-leg jeans, dark wash. Cinch the waist with the Brown leather belt, slip on your Chunky white sneakers, and throw your Black cropped zip hoodie over your shoulders just in case. Finish the look with the Black crossbody bag. 
+
+Outfit 2: For an effortless mix of sweet and edgy, tuck the Y2K Baby Tee — Butterfly Print into your Wide-leg khaki trousers. Add the Black combat boots to anchor the pastel butterfly print, and layer the Vintage black denim jacket on top.
+
+  Fit card: Scored this cute butterfly baby tee on Depop for just $18! Loving it dressed down with baggy denim and sneakers for major 2000s vibes. 🦋 #y2kstyle
+
+2 model calls this session, 619 prompt + 212 output tokens
 ```
 
 **The three tools, tested one at a time**
@@ -161,14 +172,32 @@ $ python -c "from tools import search_listings; print(search_listings('graphic t
 ```
 
 ```
-$ python -c "from tools import suggest_outfit; ..."
+$ python -c "from tools import suggest_outfit; from utils.data_loader import get_example_wardrobe, load_listings; print(suggest_outfit(load_listings()[0], get_example_wardrobe()))"
+$38 for vintage Levi's 501s is a total score! Here are two fun ways to style them using pieces you already own.
 
+Outfit One: Casual Streetwear
+Pair the Vintage Levi's 501 Jeans — Medium Wash with your white ribbed tank top and black cropped zip hoodie layered on top. Add your chunky white sneakers and the black crossbody bag for an effortless, comfy vibe. 
+
+Outfit Two: Edgy Denim on Denim
+Rock the Vintage Levi's 501 Jeans — Medium Wash with your oversized grey crewneck sweatshirt and the vintage black denim jacket thrown over it. Cinch your waist with the brown leather belt, and finish the look with your black combat boots for some serious attitude.
 ```
 
 ```
-$ python -c "from tools import create_fit_card; ..."
+$ python -c "from tools import create_fit_card; from utils.data_loader import load_listings; print(create_fit_card('jeans and white sneakers', load_listings()[0]))"
+Nothing beats a classic pair of vintage Levi's 501s for that effortless off-duty look. Snagged these on depop for just $38 and I'm obsessed with the wash. Paired them with fresh white sneakers for running errands today. 👖✨
+```
+
+**The empty search branch**
 
 ```
+$ python app.py ask 'designer ballgown size XXS under $5'
+
+  No listings matched "designer ballgown" in size XXS under $5. Try to raise your budget above $5, drop the size or try one near XXS, or use fewer or more general words than "designer ballgown".
+
+0 model calls this session
+```
+
+It stops before `suggest_outfit`, so no model calls are made.
 
 ---
 
