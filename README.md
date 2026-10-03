@@ -69,24 +69,25 @@ brand. That shaped how the search tool matches sizes.
 
 ### `search_listings`
 
-- **What it does:**
-- **Inputs:** <!-- name and type each: `max_price` (float), not "a price" -->
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Loads every listing with `load_listings()`, drops anything over the price cap or in the wrong size, and ranks the rest by how many of the user's keywords show up in the listing.
+- **Inputs:** `description` (str, keywords like "vintage graphic tee"), `size` (str or None, None skips the size filter), `max_price` (float or None, inclusive, None skips the price filter).
+- **Returns:** `list[dict]`, best match first, at most `config.SEARCH_RESULT_LIMIT` (10). Each dict is a full listing: `id` (str), `title` (str), `description` (str), `category` (str), `style_tags` (list[str]), `size` (str), `condition` (str), `price` (float), `colors` (list[str]), `brand` (str or None), `platform` (str).
+- **When it has nothing:** returns `[]`, an empty list. Never None and never an exception.
+- **What counts as a size match:** sizes are compared as whole tokens, never substrings, so `M` matches `M`, `S/M` and `M/L` but not `XL`, and `S` does not match `US 9`. A number matches shoe and waist sizes (`8` matches `US 8` but not `US 8.5`, `30` matches `W30`). `One Size` listings match any size.
 
 ### `suggest_outfit`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Asks the model for one or two outfits built around the new item, naming pieces the user already owns.
+- **Inputs:** `new_item` (dict, one listing from `search_listings`), `wardrobe` (dict with an `items` key holding a list of wardrobe item dicts, which may be empty).
+- **Returns:** `str`, a non-empty block of outfit suggestions written by the model.
+- **When it has nothing:** if `wardrobe["items"]` is empty, it does not fail. It asks the model for general styling advice for the item instead (what kinds of pieces pair well with it) and returns that string.
 
 ### `create_fit_card`
 
-- **What it does:**
-- **Inputs:**
-- **Returns:**
-- **When it has nothing:**
+- **What it does:** Asks the model for a short social media caption about the find, mentioning the item, its price and its platform once each.
+- **Inputs:** `outfit` (str, the text from `suggest_outfit`), `new_item` (dict, the same listing that went into `suggest_outfit`).
+- **Returns:** `str`, a caption of two to four sentences.
+- **When it has nothing:** if `outfit` is empty or only whitespace, it skips the model call and returns the string `"No outfit to caption yet. Run suggest_outfit first."`
 
 ---
 
@@ -103,7 +104,12 @@ brand. That shaped how the search tool matches sizes.
      The grader checks your code against what you claim here, so the file and
      function have to be real. -->
 
-**Branch rule:**
+**Branch rule:** If `search_listings` returns an empty list, write a message
+to `session["error"]` that names what the user could change (raise the budget,
+drop or change the size, or use broader words) and return the session right
+away, without calling `suggest_outfit` or `create_fit_card`. Otherwise take
+the first result as `session["selected_item"]` and go on to `suggest_outfit`,
+then `create_fit_card`.
 
 **Where it lives:** `agent.py::run_agent`
 
