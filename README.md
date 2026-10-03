@@ -39,8 +39,18 @@
 
 ## What This Does
 
-<!-- Three or four sentences: what a user asks for, and what they get back. -->
+FitFindr is a small thrifting agent. You tell it what you want in plain words,
+like `vintage graphic tee under $30, size M`, and it searches 40 secondhand
+listings from Depop, thredUp and Poshmark for the best match. If it finds
+something, it looks at your wardrobe and suggests a couple of outfits built
+around the new piece, then writes a short caption you could post with the fit.
+If nothing matches, it stops right there and tells you what to change (your
+budget, your size, or your wording) instead of making something up.
 
+**What I noticed in the data (Milestone 1):** sizes are not uniform. Tops use
+letters (`S`, `M/L`, `XL (oversized)`), pants use waist sizes (`W30 L30`),
+shoes use `US 8.5`, and accessories are `One Size`. Most listings have no
+brand. That shaped how the search tool matches sizes.
 
 
 ---
