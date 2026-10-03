@@ -13,6 +13,8 @@ Build and test your three tools in `tools.py` first. Then come here.
     python agent.py          runs both example paths below
 """
 
+import re
+
 import config
 import trace
 from tools import search_listings, suggest_outfit, create_fit_card
@@ -106,10 +108,117 @@ def run_agent(query: str, wardrobe: dict) -> dict:
         than a stack trace. The import is already at the top of this file.
     """
     session = new_session(query, wardrobe)
+    steps = 0
 
-    # TODO: delete these two lines and build the loop.
-    session["error"] = "The planning loop isn't built yet — see the TODO in agent.py."
+    # Step 1: parse the query into description, size and max_price.
+    steps += 1
+    trace.check_iterations(steps)
+    session["parsed"] = parse_query(query)
+
+    # Step 2: search, reading the inputs back out of the session.
+    steps += 1
+    trace.check_iterations(steps)
+    parsed = session["parsed"]
+    session["search_results"] = search_listings(
+        parsed["description"], parsed["size"], parsed["max_price"]
+    )
+
+    # THE BRANCH. Nothing found means we stop here, before any model call.
+    if not session["search_results"]:
+        session["error"] = _no_results_message(session["parsed"])
+        return session
+
+    # Step 3: pick the best match and style it.
+    steps += 1
+    trace.check_iterations(steps)
+    session["selected_item"] = session["search_results"][0]
+    session["outfit_suggestion"] = suggest_outfit(
+        session["selected_item"], session["wardrobe"]
+    )
+
+    # Step 4: write the fit card from what the session now holds.
+    steps += 1
+    trace.check_iterations(steps)
+    session["fit_card"] = create_fit_card(
+        session["outfit_suggestion"], session["selected_item"]
+    )
+
     return session
+
+
+# ── query parsing ─────────────────────────────────────────────────────────────
+
+_PRICE = re.compile(
+    r"(?:under|below|less than|max|up to|<)\s*\$?\s*(\d+(?:\.\d+)?)"
+    r"|\$\s*(\d+(?:\.\d+)?)",
+    re.IGNORECASE,
+)
+_SIZE_WORD = re.compile(r"\b(?:in\s+)?size\s+((?:US\s+|W)?[A-Za-z0-9.]+)", re.IGNORECASE)
+# A bare letter size, only when typed in capitals, so the "m" in "i'm" is not a size.
+_SIZE_BARE = re.compile(r"\b(XXS|XS|S|M|L|XL|XXL)\b")
+_FILLER = re.compile(
+    r"\b(?:i'?m |i am )?(?:looking for|searching for|i want|i need|find me|show me)\b",
+    re.IGNORECASE,
+)
+
+
+def parse_query(query: str) -> dict:
+    """
+    Pull a description, a size and a max_price out of plain text with regex.
+
+    "vintage graphic tee under $30, size M"
+        -> {"description": "vintage graphic tee", "size": "M", "max_price": 30.0}
+
+    Anything not mentioned comes back as None, which tells search_listings to
+    skip that filter.
+    """
+    text = query
+
+    max_price = None
+    price_match = _PRICE.search(text)
+    if price_match:
+        max_price = float(price_match.group(1) or price_match.group(2))
+        text = text[: price_match.start()] + " " + text[price_match.end():]
+
+    size = None
+    size_match = _SIZE_WORD.search(text) or _SIZE_BARE.search(text)
+    if size_match:
+        size = size_match.group(1).strip()
+        text = text[: size_match.start()] + " " + text[size_match.end():]
+
+    text = _FILLER.sub(" ", text)
+    text = re.sub(r"[,.;!?]", " ", text)
+    text = re.sub(r"\s+(?:in|and|for)\s*$", "", text.strip(), flags=re.IGNORECASE)
+    description = re.sub(r"\s+", " ", text).strip()
+    description = re.sub(r"^(?:a|an|some)\s+", "", description, flags=re.IGNORECASE)
+
+    return {"description": description, "size": size, "max_price": max_price}
+
+
+def _no_results_message(parsed: dict) -> str:
+    """Tell the user exactly which knobs they can turn, based on what they asked for."""
+    words = f'"{parsed["description"]}"' if parsed["description"] else "that"
+    asked = words
+    if parsed["size"]:
+        asked += f" in size {parsed['size']}"
+    if parsed["max_price"] is not None:
+        asked += f" under ${parsed['max_price']:g}"
+
+    tips = []
+    if parsed["max_price"] is not None:
+        tips.append(f"raise your budget above ${parsed['max_price']:g}")
+    if parsed["size"]:
+        tips.append(f"drop the size or try one near {parsed['size']}")
+    if parsed["description"]:
+        tips.append(f"use fewer or more general words than {words}")
+    else:
+        tips.append("describe the item, like 'denim jacket'")
+
+    if len(tips) > 1:
+        tip_text = ", ".join(tips[:-1]) + ", or " + tips[-1]
+    else:
+        tip_text = tips[0]
+    return f"No listings matched {asked}. Try to {tip_text}."
 
 
 # ── running it directly ───────────────────────────────────────────────────────

@@ -113,9 +113,28 @@ then `create_fit_card`.
 
 **Where it lives:** `agent.py::run_agent`
 
-**How the query is parsed:** <!-- regex, string splitting, or asking the model — say which -->
+**How the query is parsed:** Regex, in `agent.py::parse_query`. It looks for a
+price after words like "under" or a `$` sign, then a size after the word "size"
+(or a capitalized letter size like `M` on its own). Whatever is left, minus
+filler like "looking for", becomes the description. Anything the user didn't
+mention comes back as `None`, so the search skips that filter. No model call is
+used for parsing, which keeps the empty-search path free of model calls.
 
-**What moves through the session:** <!-- which fields, in what order -->
+**What moves through the session:** Every tool reads its inputs from the
+session and writes its result back before the next step runs.
+
+1. `query` and `wardrobe` are stored when the session is created.
+2. `parsed` gets `{description, size, max_price}` from `parse_query`.
+3. `search_results` gets the list from `search_listings`, called with the three
+   values read out of `parsed`.
+4. If that list is empty, `error` gets the message and the run ends here.
+   `selected_item`, `outfit_suggestion` and `fit_card` stay `None`.
+5. Otherwise `selected_item` gets `search_results[0]`.
+6. `outfit_suggestion` gets the text from `suggest_outfit(selected_item, wardrobe)`.
+7. `fit_card` gets the caption from `create_fit_card(outfit_suggestion, selected_item)`.
+
+Each step also calls `trace.check_iterations()`, so a broken branch can never
+loop forever.
 
 ---
 

@@ -35,7 +35,30 @@ SCENARIOS = [
         "wardrobe": "empty",
         "criterion": None,
     },
-    # TODO: add what your criteria 3, 4 and 5 need.
+    {
+        # Criterion 3: selected_item matches search_results[0] and its title
+        # shows up in the outfit or the caption.
+        "name": "state carries the same item through",
+        "query": "90s track jacket in size M",
+        "wardrobe": "example",
+        "criterion": 3,
+    },
+    {
+        # Criterion 4: caption is 2 to 4 sentences, under 400 characters,
+        # and names the price and platform.
+        "name": "fit card reads like a post",
+        "query": "denim jacket under $50",
+        "wardrobe": "example",
+        "criterion": 4,
+    },
+    {
+        # Criterion 5: every result respects the price cap and the size.
+        "name": "search respects price and size",
+        "query": "vintage graphic tee under $30, size M",
+        "wardrobe": "example",
+        "criterion": 5,
+    },
+    # Old notes from the starter, kept for reference:
     #
     # Set "criterion" to the number in criteria.md that the scenario tests.
     # "criterion": None means a diagnostic run — useful to have, but it isn't
