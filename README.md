@@ -172,6 +172,47 @@ $ python -c "from tools import create_fit_card; ..."
 
 ---
 
+## Overview / Usage
+
+**Setup (macOS or Linux):**
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env          # then paste your GEMINI_API_KEY into .env
+python test.py                # checks Python, packages, key and one model call
+```
+
+**Running it:**
+
+```bash
+python app.py ask 'vintage graphic tee under $30, size M'   # one query
+python app.py ask                                         # keep asking until you press Enter on a blank line
+python app.py ask 'denim jacket under $50' --empty-wardrobe
+python app.py ask 'designer ballgown size XXS under $5'    # the early exit
+python agent.py                                           # runs a matching and a non-matching query
+```
+
+Use single quotes around the query. In PowerShell, `$30` inside double quotes
+gets read as a variable and quietly disappears.
+
+**How a query is understood:** you can mention a price (`under $30`, `$30`),
+a size (`size M`, `size 8`, `size 30`, or a capital `M` on its own) and
+describe the item in your own words. Leave any of them out and that filter is
+skipped.
+
+**Files I changed:**
+
+| File | What's in it |
+|---|---|
+| `tools.py` | The three tools and the size and keyword matching helpers |
+| `agent.py` | `run_agent` (the loop and the branch) and `parse_query` |
+| `criteria.md` | The five acceptance criteria |
+| `scenarios.py` | Eval scenarios for criteria 3, 4 and 5 |
+
+---
+
 ## How I Used AI
 
 <!-- Two specific moments. What you asked, what came back, what you changed.
