@@ -253,15 +253,13 @@ skipped.
 
 **Moment 1**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+I asked Claude to write search_listings to filter by size, price, and keywords. It noted that raw sizes like "S/M" or "US 8.5" cause simple string checks to fail, so it switched to token matching. I tested cases like "M" vs "XL" and "8" vs "US 8.5" myself, then cleaned up an unnecessary synonym list it added.
+
+
 
 **Moment 2**
 
-- *What I asked for:*
-- *What came back:*
-- *What I changed:*
+I asked Claude to generate a helpful message when a search finds no results. Its first code hardcoded "jacket" and "ballgown" for every query. I had it use the user's actual search terms instead, so the message gives tailored feedback based on their real budget, size, and query.
 
 <!-- ═══════════════════════ UNIT 4 — THE TEST ═══════════════════════
 
