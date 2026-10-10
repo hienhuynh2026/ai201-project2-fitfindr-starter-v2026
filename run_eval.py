@@ -203,6 +203,15 @@ def write_report(rows, args):
 
     path.write_text("\n".join(lines), encoding="utf-8")
 
+    # The raw sessions too, so score_run.py can check the parts the markdown
+    # leaves out (every search result's price and size, the item ids).
+    import json
+    raw = [{"scenario": r["scenario"],
+            "tries": [{k: t.get(k) for k in ("session", "trace", "crashed")}
+                      for t in r["tries"]]} for r in rows]
+    path.with_suffix(".json").write_text(
+        json.dumps(raw, indent=1, ensure_ascii=False, default=str), encoding="utf-8")
+
     import generate
 
     print(f"Wrote {path.relative_to(config.ROOT)}")
