@@ -92,7 +92,7 @@ def search_listings(
     condition, price (number, US dollars), colors (list of strings), brand
     (string or null; usually null) and platform.
 
-    When nothing matches, it returns an empty list [] — never null and never
+    When nothing matches, it returns an empty list [], never null and never
     an error. An empty or stopword-only description also returns [].
     """
     return _search_listings_impl(description, size, max_price)

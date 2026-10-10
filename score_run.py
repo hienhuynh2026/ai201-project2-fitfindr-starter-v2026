@@ -6,7 +6,7 @@ Mark every try in a run log PASS or FAIL against criteria.md, and say why.
 
 run_eval.py leaves the verdicts to you. This is me doing that, written down as
 code so every PASS/FAIL has a reason printed next to it and can be checked.
-Each check is the criterion's wording in criteria.md, read literally — no
+Each check is the criterion's wording in criteria.md, read literally, no
 looser. It does not import tools.py, so the size check in criterion 5 is an
 independent re-implementation of the rule, not the search grading itself.
 """
@@ -43,8 +43,10 @@ def c2(s, t):
         return False, "no error message; the run did not stop"
     if s.get("outfit_suggestion") is not None or s.get("fit_card") is not None:
         return False, "suggest_outfit or create_fit_card ran anyway"
-    if "suggest_outfit" in (t or ""):
-        return False, "suggest_outfit appears in the trace"
+    # A step line, "[3] suggest_outfit". Not just the word: the branch's own
+    # note says "stopping before suggest_outfit".
+    if re.search(r"^\[\d+\] suggest_outfit", t or "", re.M):
+        return False, "a suggest_outfit step appears in the trace"
     if not re.search(r"\b(raise|drop|try|use fewer|describe)\b", s["error"], re.I):
         return False, "message doesn't name anything to change"
     return True, "stopped after search; message names what to change"
@@ -141,7 +143,7 @@ def main(path):
                 why = ("completed" if ok else f"stopped: {s.get('error')}") + \
                       (f"; notice: {s['notice'][:50]}…" if s.get("notice") else "; NO notice")
             marks.append(ok)
-            print(f"  try {i}: {'PASS' if ok else 'FAIL'} — {why}")
+            print(f"  try {i}: {'PASS' if ok else 'FAIL'}: {why}")
         if num:
             table[num] = marks
 

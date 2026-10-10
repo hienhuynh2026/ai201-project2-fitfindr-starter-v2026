@@ -1,0 +1,56 @@
+
+1. A matching query completes all three tools
+  query: vintage graphic tee under $30  (example wardrobe)
+  try 1: PASS: search, suggest_outfit and create_fit_card all returned
+  try 2: PASS: search, suggest_outfit and create_fit_card all returned
+  try 3: PASS: search, suggest_outfit and create_fit_card all returned
+  try 4: PASS: search, suggest_outfit and create_fit_card all returned
+  try 5: PASS: search, suggest_outfit and create_fit_card all returned
+
+2. An impossible query stops before the second tool
+  query: designer ballgown size XXS under $5  (example wardrobe)
+  try 1: PASS: stopped after search; message names what to change
+  try 2: PASS: stopped after search; message names what to change
+  try 3: PASS: stopped after search; message names what to change
+  try 4: PASS: stopped after search; message names what to change
+  try 5: PASS: stopped after search; message names what to change
+
+(diagnostic) empty wardrobe
+  query: denim jacket under $50  (empty wardrobe)
+  try 1: PASS: completed; notice: Your wardrobe is empty, so these are general styli…
+  try 2: PASS: completed; notice: Your wardrobe is empty, so these are general styli…
+  try 3: PASS: completed; notice: Your wardrobe is empty, so these are general styli…
+  try 4: PASS: completed; notice: Your wardrobe is empty, so these are general styli…
+  try 5: PASS: completed; notice: Your wardrobe is empty, so these are general styli…
+
+3. The item found is the item styled and captioned
+  query: 90s track jacket in size M  (example wardrobe)
+  try 1: PASS: ids match (lst_004); full title in outfit
+  try 2: PASS: ids match (lst_004); full title in outfit
+  try 3: FAIL: ids match (lst_004) but full title '90s Track Jacket — Navy/White Stripe' in neither outfit nor fit card
+  try 4: FAIL: ids match (lst_004) but full title '90s Track Jacket — Navy/White Stripe' in neither outfit nor fit card
+  try 5: PASS: ids match (lst_004); full title in outfit
+
+4. The fit card reads like a real post
+  query: denim jacket under $50  (example wardrobe)
+  try 1: PASS: 2 sentences, 201 chars, price and platform present
+  try 2: PASS: 2 sentences, 167 chars, price and platform present
+  try 3: PASS: 3 sentences, 170 chars, price and platform present
+  try 4: PASS: 2 sentences, 177 chars, price and platform present
+  try 5: PASS: 2 sentences, 169 chars, price and platform present
+
+5. Search never breaks the price cap or the size
+  query: vintage graphic tee under $30, size M  (example wardrobe)
+  try 1: PASS: all 10 ≤ $30 and size M (2 are One Size)
+  try 2: PASS: all 10 ≤ $30 and size M (2 are One Size)
+  try 3: PASS: all 10 ≤ $30 and size M (2 are One Size)
+  try 4: PASS: all 10 ≤ $30 and size M (2 are One Size)
+  try 5: PASS: all 10 ≤ $30 and size M (2 are One Size)
+
+| Criterion | Target | Try 1 | Try 2 | Try 3 | Try 4 | Try 5 | Verdict |
+|---|---|---|---|---|---|---|---|
+| 1. A matching query completes all three tools | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 2. An impossible query stops before the second tool | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 3. The item found is the item styled and captioned | 5 of 5 | PASS | PASS | FAIL | FAIL | PASS | MISSED (3/5) |
+| 4. The fit card reads like a real post | 4 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
+| 5. Search never breaks the price cap or the size | 5 of 5 | PASS | PASS | PASS | PASS | PASS | MET (5/5) |
