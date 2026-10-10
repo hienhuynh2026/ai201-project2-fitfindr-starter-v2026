@@ -29,13 +29,17 @@ import config
 
 _lines: list[str] = []
 _step_number = 0
+# Steps only print once a trace has been started (app.py --trace, run_eval.py),
+# so a plain `app.py ask` still shows just the answer.
+_printing = False
 
 
 def start_trace() -> None:
     """Clear the trace. Call this at the start of each run."""
-    global _step_number
+    global _step_number, _printing
     _lines.clear()
     _step_number = 0
+    _printing = True
 
 
 def step(name: str, inputs=None, returned=None, note: str = "") -> None:
@@ -61,7 +65,8 @@ def step(name: str, inputs=None, returned=None, note: str = "") -> None:
         line += f"\n      →    {note}"
 
     _lines.append(line)
-    print(line, flush=True)
+    if _printing:
+        print(line, flush=True)
 
 
 def get_trace() -> str:

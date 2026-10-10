@@ -19,7 +19,7 @@ import config
 import trace
 from tools import suggest_outfit, create_fit_card
 from generate import ModelUnavailable
-from mcp_client import call_tool
+from mcp_client import call_tool, MCPError
 
 
 # ── session state ─────────────────────────────────────────────────────────────
@@ -47,6 +47,7 @@ def new_session(query: str, wardrobe: dict) -> dict:
         "outfit_suggestion": None,   # what suggest_outfit returned
         "fit_card": None,            # what create_fit_card returned
         "error": None,               # set when the run ended early
+        "notice": None,              # set when the run finished, but with less than usual
     }
 
 
@@ -115,36 +116,97 @@ def run_agent(query: str, wardrobe: dict) -> dict:
     steps += 1
     trace.check_iterations(steps)
     session["parsed"] = parse_query(query)
+    trace.step("parse_query", inputs=query, returned=_kv(session["parsed"]))
 
     # Step 2: search, reading the inputs back out of the session.
     steps += 1
     trace.check_iterations(steps)
     parsed = session["parsed"]
-    # search_listings now runs behind mcp_server.py, not as a direct import.
-    session["search_results"] = call_tool("search_listings", {
+    search_args = {
         "description": parsed["description"],
         "size": parsed["size"],
         "max_price": parsed["max_price"],
-    })
+    }
+    # search_listings now runs behind mcp_server.py, not as a direct import.
+    try:
+        session["search_results"] = call_tool("search_listings", search_args)
+    except MCPError as exc:
+        # Failure: the MCP server didn't start or refused the call.
+        session["error"] = (
+            "The listings search couldn't be reached, so nothing was searched. "
+            "Run `python mcp_server.py` on its own to see why it won't start, "
+            "then try again."
+        )
+        trace.step("search_listings (via MCP)", inputs=_kv(search_args),
+                   returned=f"MCPError: {str(exc).splitlines()[0]}",
+                   note="search unreachable, stopping")
+        return session
 
     # THE BRANCH. Nothing found means we stop here, before any model call.
     if not session["search_results"]:
+        # Failure mode 1: an empty search.
         session["error"] = _no_results_message(session["parsed"])
+        trace.step("search_listings (via MCP)", inputs=_kv(search_args),
+                   returned=session["search_results"],
+                   note="branch: empty, stopping before suggest_outfit")
         return session
+    trace.step("search_listings (via MCP)", inputs=_kv(search_args),
+               returned=session["search_results"],
+               note="branch: results found, taking the first one")
 
     # Step 3: pick the best match and style it.
     steps += 1
     trace.check_iterations(steps)
     session["selected_item"] = session["search_results"][0]
-    session["outfit_suggestion"] = suggest_outfit(
-        session["selected_item"], session["wardrobe"]
+
+    wardrobe_items = (session["wardrobe"] or {}).get("items") or []
+    if not wardrobe_items:
+        # Failure mode 2: an empty wardrobe. suggest_outfit falls back to
+        # general advice; the user should know that's what they're getting.
+        session["notice"] = (
+            "Your wardrobe is empty, so these are general styling ideas rather "
+            "than outfits built from pieces you own. Add a few items to your "
+            "wardrobe for suggestions that use your own closet."
+        )
+
+    try:
+        session["outfit_suggestion"] = suggest_outfit(
+            session["selected_item"], session["wardrobe"]
+        )
+    except ModelUnavailable as exc:
+        # Failure mode 3: the model can't be reached (bad key, no network).
+        session["error"] = _model_down_message(session["selected_item"], exc)
+        trace.step("suggest_outfit", inputs=session["selected_item"],
+                   returned=f"ModelUnavailable: {exc}",
+                   note="model unreachable, stopping")
+        return session
+    trace.step(
+        "suggest_outfit",
+        inputs=f"new_item={session['selected_item']['id']} "
+               f"{session['selected_item']['title']!r}, wardrobe={len(wardrobe_items)} items",
+        returned=session["outfit_suggestion"],
+        note="empty wardrobe: general advice" if not wardrobe_items else "",
     )
 
     # Step 4: write the fit card from what the session now holds.
     steps += 1
     trace.check_iterations(steps)
-    session["fit_card"] = create_fit_card(
-        session["outfit_suggestion"], session["selected_item"]
+    try:
+        session["fit_card"] = create_fit_card(
+            session["outfit_suggestion"], session["selected_item"]
+        )
+    except ModelUnavailable as exc:
+        session["error"] = _model_down_message(session["selected_item"], exc)
+        trace.step("create_fit_card", inputs=session["selected_item"],
+                   returned=f"ModelUnavailable: {exc}",
+                   note="model unreachable, stopping")
+        return session
+    trace.step(
+        "create_fit_card",
+        inputs=f"new_item={session['selected_item']['id']} "
+               f"{session['selected_item']['title']!r}, "
+               f"outfit={len(session['outfit_suggestion'])} chars",
+        returned=session["fit_card"],
     )
 
     return session
@@ -223,6 +285,20 @@ def _no_results_message(parsed: dict) -> str:
     else:
         tip_text = tips[0]
     return f"No listings matched {asked}. Try to {tip_text}."
+
+
+def _kv(values: dict) -> str:
+    """A dict as one trace line, so the trace shows the values, not just the keys."""
+    return ", ".join(f"{k}={v!r}" for k, v in values.items())
+
+
+def _model_down_message(item: dict, exc: Exception) -> str:
+    """Say what was found, what broke, and what to try, when the model is down."""
+    return (
+        f"Found {item.get('title')} (${item.get('price'):g} on {item.get('platform')}), "
+        f"but couldn't write the outfit or the caption: {exc} "
+        f"Fix that and ask again; the search itself worked."
+    )
 
 
 # ── running it directly ───────────────────────────────────────────────────────
