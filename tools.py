@@ -218,7 +218,8 @@ def suggest_outfit(new_item: dict, wardrobe: dict) -> str:
             f"Here is what they already own:\n{closet}\n\n"
             "Suggest one or two outfits built around the new piece. Each outfit "
             "should name specific pieces from their closet, using the names as "
-            "written above. Mention the new item by its title. Keep it under "
+            "written above. Mention the new item at least once by its full "
+            f"title, copied exactly: {new_item.get('title')}. Keep it under "
             "120 words. Plain text, no markdown headers."
         )
 
