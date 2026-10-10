@@ -67,23 +67,36 @@ from tools import search_listings as _search_listings_impl  # noqa: F401 — you
 mcp = FastMCP("fitfindr", log_level="WARNING")
 
 
-# ── TODO: uncomment and fill this in ──────────────────────────────────────────
-#
-# @mcp.tool()
-# def search_listings(
-#     description: str,
-#     size: str | None = None,
-#     max_price: float | None = None,
-# ) -> list[dict]:
-#     """
-#     <-- YOUR DESCRIPTION GOES HERE.
-#
-#         One or two sentences. What does this tool do, what does it need, and
-#         what does it give back when it finds nothing? Written for a reader
-#         who cannot see the code.
-#     """
-#     return _search_listings_impl(description, size, max_price)
-#
+# ── The registered tool ───────────────────────────────────────────────────────
+
+@mcp.tool()
+def search_listings(
+    description: str,
+    size: str | None = None,
+    max_price: float | None = None,
+) -> list[dict]:
+    """
+    Search 40 secondhand clothing listings (Depop, thredUp, Poshmark) by
+    keywords, with an optional size and an optional price ceiling.
+
+    Inputs:
+      description: keywords for the item, e.g. "vintage graphic tee". Required.
+      size: a size such as "M", "8" (US shoe) or "30" (waist), matched as a
+            whole token, so "M" matches "S/M" but never "XL". "One Size"
+            listings match any size. Omit or pass null to skip the size filter.
+      max_price: the most the user will pay, in US dollars, inclusive
+            (e.g. 30 or 29.99). Omit or pass null for no ceiling.
+
+    Returns a list of up to 10 listing objects, best keyword match first. Each
+    has id, title, description, category, style_tags (list of strings), size,
+    condition, price (number, US dollars), colors (list of strings), brand
+    (string or null; usually null) and platform.
+
+    When nothing matches, it returns an empty list [] — never null and never
+    an error. An empty or stopword-only description also returns [].
+    """
+    return _search_listings_impl(description, size, max_price)
+
 # ──────────────────────────────────────────────────────────────────────────────
 #
 # Two notes on the block above.
